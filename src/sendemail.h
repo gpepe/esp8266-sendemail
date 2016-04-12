@@ -4,7 +4,7 @@
 //#define DEBUG_EMAIL_PORT
 
 #include <WiFiClient.h>
-#include "WiFiClientSecure.h"
+#include <WiFiClientSecure.h>
 #include <base64.h>
 
 class SendEmail
