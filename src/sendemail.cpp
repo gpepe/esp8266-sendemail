@@ -1,11 +1,12 @@
 #include "sendemail.h"
 
-SendEmail::SendEmail(const String& _host, const int _port, const String& _user, const String& _passwd, const int timeout, const bool ssl) :
-    host(_host), port(_port), user(_user), passwd(_passwd), timeout(timeout), ssl(ssl)
+SendEmail::SendEmail(const String& host, const int port, const String& user, const String& passwd, const int timeout, const bool ssl) :
+    host(host), port(port), user(user), passwd(passwd), timeout(timeout), ssl(ssl), client((ssl) ? new WiFiClientSecure() : new WiFiClient())
 {
+
 }
 
-String SendEmail::readClient(WiFiClient* client)
+String SendEmail::readClient()
 {
   String r = client->readStringUntil('\n');
   r.trim();
@@ -15,13 +16,12 @@ String SendEmail::readClient(WiFiClient* client)
 
 bool SendEmail::send(const String& from, const String& to, const String& subject, const String& msg)
 {
-  WiFiClient* client = (ssl) ? new WiFiClientSecure() : new WiFiClient();
-  client->setTimeout(timeout);
   if (!host.length())
   {
-    delete client;
     return false;
   }
+  client->stop();
+  client->setTimeout(timeout);
   // smtp connect
 #ifdef DEBUG_EMAIL_PORT
   DEBUG_EMAIL_PORT.print("Connecting: ");
@@ -31,31 +31,28 @@ bool SendEmail::send(const String& from, const String& to, const String& subject
 #endif
   if (!client->connect(host.c_str(), port))
   {
-    delete client;
     return false;
   }
-  String buffer = readClient(client);
+  String buffer = readClient();
 #ifdef DEBUG_EMAIL_PORT
   DEBUG_EMAIL_PORT.println(buffer);
 #endif
   if (!buffer.startsWith(F("220")))
   {
-    delete client;
     return false;
   }
   buffer = F("EHLO ");
-  buffer += client->localIP().toString();
+  buffer += client->localIP();
   client->println(buffer);
 #ifdef DEBUG_EMAIL_PORT
   DEBUG_EMAIL_PORT.println(buffer);
 #endif
-  buffer = readClient(client);
+  buffer = readClient();
 #ifdef DEBUG_EMAIL_PORT
   DEBUG_EMAIL_PORT.println(buffer);
 #endif
   if (!buffer.startsWith(F("250")))
   {
-    delete client;
     return false;
   }
   if (user.length()>0  && passwd.length()>0 )
@@ -65,13 +62,12 @@ bool SendEmail::send(const String& from, const String& to, const String& subject
 #ifdef DEBUG_EMAIL_PORT
   DEBUG_EMAIL_PORT.println(buffer);
 #endif
-    buffer = readClient(client);
+    buffer = readClient();
 #ifdef DEBUG_EMAIL_PORT
   DEBUG_EMAIL_PORT.println(buffer);
 #endif
     if (!buffer.startsWith(F("334")))
     {
-      delete client;
       return false;
     }
     base64 b;
@@ -81,13 +77,12 @@ bool SendEmail::send(const String& from, const String& to, const String& subject
 #ifdef DEBUG_EMAIL_PORT
   DEBUG_EMAIL_PORT.println(buffer);
 #endif
-    buffer = readClient(client);
+    buffer = readClient();
 #ifdef DEBUG_EMAIL_PORT
   DEBUG_EMAIL_PORT.println(buffer);
 #endif
     if (!buffer.startsWith(F("334")))
     {
-      delete client;
       return false;
     }
     buffer = this->passwd;
@@ -96,13 +91,12 @@ bool SendEmail::send(const String& from, const String& to, const String& subject
 #ifdef DEBUG_EMAIL_PORT
   DEBUG_EMAIL_PORT.println(buffer);
 #endif
-    buffer = readClient(client);
+    buffer = readClient();
 #ifdef DEBUG_EMAIL_PORT
   DEBUG_EMAIL_PORT.println(buffer);
 #endif
     if (!buffer.startsWith(F("235")))
     {
-      delete client;
       return false;
     }
   }
@@ -113,13 +107,12 @@ bool SendEmail::send(const String& from, const String& to, const String& subject
 #ifdef DEBUG_EMAIL_PORT
   DEBUG_EMAIL_PORT.println(buffer);
 #endif
-  buffer = readClient(client);
+  buffer = readClient();
 #ifdef DEBUG_EMAIL_PORT
   DEBUG_EMAIL_PORT.println(buffer);
 #endif
   if (!buffer.startsWith(F("250")))
   {
-    delete client;
     return false;
   }
   buffer = F("RCPT TO: ");
@@ -128,13 +121,12 @@ bool SendEmail::send(const String& from, const String& to, const String& subject
 #ifdef DEBUG_EMAIL_PORT
   DEBUG_EMAIL_PORT.println(buffer);
 #endif
-  buffer = readClient(client);
+  buffer = readClient();
 #ifdef DEBUG_EMAIL_PORT
   DEBUG_EMAIL_PORT.println(buffer);
 #endif
   if (!buffer.startsWith(F("250")))
   {
-    delete client;
     return false;
   }
   buffer = F("DATA");
@@ -142,13 +134,12 @@ bool SendEmail::send(const String& from, const String& to, const String& subject
 #ifdef DEBUG_EMAIL_PORT
   DEBUG_EMAIL_PORT.println(buffer);
 #endif
-  buffer = readClient(client);
+  buffer = readClient();
 #ifdef DEBUG_EMAIL_PORT
   DEBUG_EMAIL_PORT.println(buffer);
 #endif
   if (!buffer.startsWith(F("354")))
   {
-    delete client;
     return false;
   }
   buffer = F("From: ");
@@ -181,6 +172,5 @@ bool SendEmail::send(const String& from, const String& to, const String& subject
 #ifdef DEBUG_EMAIL_PORT
   DEBUG_EMAIL_PORT.println(buffer);
 #endif
-  delete client;
   return true;
 }

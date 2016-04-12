@@ -4,7 +4,7 @@
 //#define DEBUG_EMAIL_PORT
 
 #include <WiFiClient.h>
-#include "WiFiClientSecure.h"
+#include <WiFiClientSecure.h>
 #include <base64.h>
 
 class SendEmail
@@ -16,10 +16,12 @@ class SendEmail
     const String passwd;
     const int timeout;
     const bool ssl;
-    String readClient(WiFiClient* client);
+    WiFiClient* client;
+    String readClient();
   public:
-   SendEmail(const String& _host, const int _port, const String& _user, const String& _passwd, const int timeout, const bool ssl);
+   SendEmail(const String& host, const int port, const String& user, const String& passwd, const int timeout, const bool ssl);
    bool send(const String& from, const String& to, const String& subject, const String& msg);
+   ~SendEmail() {client->stop(); delete client;}
 };
 
 #endif
